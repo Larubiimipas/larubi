@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>La Rubi - Layanan Rutan Raba Bima</title>
+<!--
+  Pembungkus La Rubi tanpa tulisan "This application was created by a Google Apps Script user".
+  Tulisan itu hanya muncul bila aplikasi dibuka langsung; di dalam bingkai (iframe) tidak muncul.
+  GANTI alamat di bawah dengan URL aplikasi web La Rubi (Terapkan > Kelola deployment > URL, berakhiran /exec).
+-->
+<style>
+  html, body { margin: 0; height: 100%; background: #0B1C33; }
+  iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; }
+</style>
+</head>
+<body>
+<iframe id="larubi" title="La Rubi" allow="camera; microphone; geolocation; fullscreen; clipboard-read; clipboard-write; autoplay" allowfullscreen></iframe>
+<script>
+  var URL_LARUBI = 'https://script.google.com/macros/s/AKfycbztaNwcT3-IKVf0yCCNP4M8wsaOvfrHPxFfUl-E7tEoHaSndUQL3VxwSTQXLeKY-gY_/exec';
+  /* link khusus (TPP, Kepala Rutan, barcode kunjungan: ?page=...) tetap diteruskan ke La Rubi */
+  document.getElementById('larubi').src = URL_LARUBI + (location.search || '') + (location.hash || '');
+</script>
+</body>
+</html>
