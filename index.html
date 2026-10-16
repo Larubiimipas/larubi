@@ -1,25 +1,180 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>La Rubi - Layanan Rutan Raba Bima</title>
 <!--
-  Pembungkus La Rubi tanpa tulisan "This application was created by a Google Apps Script user".
-  Tulisan itu hanya muncul bila aplikasi dibuka langsung; di dalam bingkai (iframe) tidak muncul.
-  GANTI alamat di bawah dengan URL aplikasi web La Rubi (Terapkan > Kelola deployment > URL, berakhiran /exec).
+  Pembungkus La Rubi untuk dibuka di browser (GitHub Pages) dan aplikasi Kodular.
+  1. La Rubi dibuka di dalam bingkai (iframe), sehingga pesan Google
+     "Aplikasi ini dibuat oleh pengguna Google Apps Script" tidak tampil.
+  2. KAMERA LAPTOP: halaman Google Apps Script tidak diizinkan memakai kamera. Halaman pembungkus ini yang
+     menyalakan kamera laptop / kamera USB (pindai QR & ambil foto), lalu hasilnya dikirim ke La Rubi.
+  GANTI alamat URL_LARUBI di bawah dengan URL web app La Rubi (yang berakhiran /exec).
+  Halaman ini harus dibuka lewat https:// (mis. GitHub Pages) agar kamera boleh dipakai.
 -->
 <style>
-  html, body { margin: 0; height: 100%; background: #0B1C33; }
-  iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; }
+  html, body { margin: 0; padding: 0; height: 100%; background: #16304F; overflow: hidden; font-family: system-ui, "Segoe UI", Arial, sans-serif; }
+  #larubi { position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: 0; display: block; }
+  #muat { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; color: #fff; font: 600 16px/1.4 sans-serif; background: #16304F; }
+  #muat span { width: 34px; height: 34px; border: 4px solid rgba(255,255,255,.25); border-top-color: #D9B36C; border-radius: 50%; animation: p .8s linear infinite; }
+  @keyframes p { to { transform: rotate(360deg); } }
+  /* jendela kamera */
+  #km { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(11,28,51,.75); }
+  #km[hidden] { display: none; }
+  #km .kotak { width: min(640px, 100%); max-height: 100%; overflow: auto; background: #fff; border-radius: 18px; box-shadow: 0 20px 50px rgba(0,0,0,.35); }
+  #km .atas { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px 12px 20px; background: #16304F; color: #fff; font-weight: 700; }
+  #km .atas button { width: 34px; height: 34px; border-radius: 8px; border: 1px solid rgba(255,255,255,.3); background: transparent; color: #fff; font-size: 16px; cursor: pointer; }
+  #km .isi { padding: 16px 20px 20px; display: grid; gap: 12px; }
+  #km .layar { position: relative; width: 100%; aspect-ratio: 4 / 3; background: #0b1c33; border-radius: 12px; overflow: hidden; display: grid; place-items: center; color: #cbd5e1; font-size: 14px; text-align: center; }
+  #km .layar video { width: 100% !important; height: 100% !important; object-fit: cover; }
+  #km-qr { width: 100%; height: 100%; }
+  #km .bingkai { position: absolute; inset: 18% 24%; border: 3px solid rgba(226,193,120,.95); border-radius: 14px; pointer-events: none; }
+  #km .baris { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
+  #km label { font-size: 13px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px; }
+  #km select { width: 100%; height: 42px; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0 10px; font-size: 14px; }
+  #km .ket { font-size: 13px; color: #475569; margin: 0; }
+  #km .tombol { display: flex; gap: 10px; flex-wrap: wrap; }
+  #km .btn { height: 42px; padding: 0 16px; border-radius: 10px; border: 1px solid #cbd5e1; background: #fff; font-weight: 700; cursor: pointer; font-size: 14px; }
+  #km .btn.utama { background: #16304F; border-color: #16304F; color: #fff; }
+  #km .galat { color: #fca5a5; font-weight: 700; padding: 16px; line-height: 1.5; }
+  @media (max-width: 560px) { #km .baris { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
-<iframe id="larubi" title="La Rubi" allow="camera; microphone; geolocation; fullscreen; clipboard-read; clipboard-write; autoplay" allowfullscreen></iframe>
+<div id="muat"><span></span>Membuka La Rubi&hellip;</div>
+<iframe id="larubi" title="La Rubi"
+  allow="camera; microphone; fullscreen; autoplay; clipboard-write"
+  allowfullscreen
+  onload="document.getElementById('muat').style.display='none'"></iframe>
+
+<div id="km" hidden role="dialog" aria-modal="true">
+  <div class="kotak">
+    <div class="atas"><span id="km-judul">Kamera</span><button type="button" id="km-tutup" aria-label="Tutup">&#x2715;</button></div>
+    <div class="isi">
+      <div class="layar" id="km-layar">Menyalakan kamera&hellip;</div>
+      <div class="baris">
+        <div><label for="km-pilih">Kamera</label><select id="km-pilih"></select></div>
+        <button class="btn utama" type="button" id="km-ambil" hidden>Ambil foto</button>
+      </div>
+      <p class="ket" id="km-ket"></p>
+      <div class="tombol"><button class="btn" type="button" id="km-batal">Batal</button></div>
+    </div>
+  </div>
+</div>
+
 <script>
   var URL_LARUBI = 'https://script.google.com/macros/s/AKfycbztaNwcT3-IKVf0yCCNP4M8wsaOvfrHPxFfUl-E7tEoHaSndUQL3VxwSTQXLeKY-gY_/exec';
-  /* link khusus (TPP, Kepala Rutan, barcode kunjungan: ?page=...) tetap diteruskan ke La Rubi */
+  /* link khusus (TPP, Kepala Rutan, barcode kunjungan, bukti titipan: ?page=...) tetap diteruskan ke La Rubi */
   document.getElementById('larubi').src = URL_LARUBI + (location.search || '') + (location.hash || '');
+</script>
+<script>
+/* ============ LAYANAN KAMERA UNTUK LA RUBI ============
+ * La Rubi (di dalam bingkai) mengirim { rrKamera: 'buka', id, mode: 'qr'|'foto', judul, ket, depan }.
+ * Halaman ini menyalakan kamera, lalu membalas { rrKamera: 'hasil', id, teks } (QR), { ..., foto: dataURL } (foto)
+ * atau { ..., batal: true }. Pesan hanya diterima dari halaman Google Apps Script. */
+(function () {
+  var HTML5QR = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+  function $(id) { return document.getElementById('km-' + id); }
+  function sahAsal(o) { return /^https:\/\/([a-z0-9-]+\.)*(googleusercontent\.com|google\.com)$/i.test(o); }
+  var S = null;
+  function simpan(mode, id) { try { localStorage.setItem('rrKamera:' + mode, id || ''); } catch (e) {} }
+  function tersimpan(mode) { try { return localStorage.getItem('rrKamera:' + mode) || ''; } catch (e) { return ''; } }
+  function muatSkrip(url) { return new Promise(function (res, rej) { if (window.Html5Qrcode) return res(); var s = document.createElement('script'); s.src = url; s.onload = res; s.onerror = function () { rej(new Error('Pustaka pemindai QR gagal dimuat. Periksa koneksi internet.')); }; document.head.appendChild(s); }); }
+  function balas(isi) { if (!S) return; try { S.sumber.postMessage(Object.assign({ rrKamera: 'hasil', id: S.id }, isi), S.asal); } catch (e) {} }
+  function hentikan() {
+    if (!S) return Promise.resolve();
+    var s = S, t = Promise.resolve();
+    if (s.pembaca) { var p = s.pembaca; t = p.stop().catch(function () {}).then(function () { try { p.clear(); } catch (e) {} }); }
+    if (s.alur) s.alur.getTracks().forEach(function (x) { x.stop(); });
+    s.pembaca = null; s.alur = null; s.video = null;
+    return t;
+  }
+  function selesai(isi) {
+    if (!S) return; balas(isi);
+    var s = S;
+    hentikan().then(function () { if (S === s) { $('layar').innerHTML = ''; document.getElementById('km').hidden = true; S = null; } });
+  }
+  function galat(e) {
+    var m = String((e && e.name) || '') + ' ' + String((e && e.message) || e || '');
+    var t = /NotAllowed|Permission/i.test(m) ? (/system/i.test(m)
+          ? 'Kamera diblokir Windows. Buka Pengaturan &gt; Privasi &amp; keamanan &gt; Kamera, aktifkan akses kamera dan "Izinkan aplikasi desktop", lalu buka ulang browser.'
+          : 'Izin kamera ditolak. Klik ikon kamera / gembok di bilah alamat, pilih Izinkan untuk Kamera, lalu muat ulang halaman.')
+      : /NotFound|not found/i.test(m) ? 'Kamera tidak ditemukan. Pastikan webcam / kamera USB terpasang.'
+      : /NotReadable|Could not start/i.test(m) ? 'Kamera sedang dipakai aplikasi lain (Zoom / WhatsApp). Tutup aplikasi itu lalu coba lagi.'
+      : 'Kamera tidak bisa dibuka: ' + m.replace(/</g, '&lt;');
+    $('layar').innerHTML = '<div class="galat">' + t + '</div>';
+  }
+  function daftar() { return navigator.mediaDevices.enumerateDevices().then(function (l) { return l.filter(function (d) { return d.kind === 'videoinput'; }); }); }
+  function isiPilihan(l, aktif) {
+    var p = $('pilih'); p.innerHTML = '';
+    l.forEach(function (d, i) { var o = document.createElement('option'); o.value = d.deviceId; o.textContent = d.label || ('Kamera ' + (i + 1)); if (d.deviceId === aktif) o.selected = true; p.appendChild(o); });
+  }
+  /* kamera pilihan: terakhir dipakai, lalu kamera USB / eksternal, lalu yang pertama */
+  function awal(l, mode) {
+    var t = tersimpan(mode); if (t && l.some(function (d) { return d.deviceId === t; })) return t;
+    var luar = l.filter(function (d) { return /usb|external|eksternal|logitech|hd pro|webcam|c9[0-9]{2}|c270|c310/i.test(d.label) && !/integrated|built.?in|facetime/i.test(d.label); })[0];
+    return (luar || l[0] || {}).deviceId || '';
+  }
+  function nyalakan(idKamera) {
+    var s = S; if (!s) return;
+    return hentikan().then(function () {
+      if (S !== s) return;
+      if (s.mode === 'qr') {
+        return muatSkrip(HTML5QR).then(function () {
+          if (S !== s) return;
+          $('layar').innerHTML = '<div id="km-qr"></div><div class="bingkai"></div>';
+          s.pembaca = new Html5Qrcode('km-qr', { verbose: false });
+          return s.pembaca.start(idKamera ? { deviceId: { exact: idKamera } } : { facingMode: 'environment' },
+            { fps: 12, qrbox: function (w, h) { var m = Math.floor(Math.min(w, h) * .7); return { width: m, height: m }; } },
+            function (teks) { if (S === s && !s.dapat) { s.dapat = true; selesai({ teks: teks }); } }, function () {});
+        });
+      }
+      return navigator.mediaDevices.getUserMedia({ video: idKamera ? { deviceId: { exact: idKamera }, width: { ideal: 1280 } } : { facingMode: s.depan ? 'user' : 'environment', width: { ideal: 1280 } }, audio: false })
+        .then(function (alur) {
+          if (S !== s) { alur.getTracks().forEach(function (x) { x.stop(); }); return; }
+          s.alur = alur;
+          var v = document.createElement('video'); v.autoplay = true; v.muted = true; v.playsInline = true; v.srcObject = alur;
+          $('layar').innerHTML = ''; $('layar').appendChild(v); s.video = v;
+          return v.play().catch(function () {});
+        });
+    }).then(function () {
+      return daftar().then(function (l) {
+        if (S !== s || !l.length) return;
+        var aktif = idKamera;
+        if (!aktif && s.alur) { var tr = s.alur.getVideoTracks()[0]; aktif = (tr && tr.getSettings && tr.getSettings().deviceId) || ''; }
+        isiPilihan(l, aktif || l[0].deviceId);
+        if (!idKamera && !s.sudahPilih) { s.sudahPilih = true; var a = awal(l, s.mode); if (a && a !== aktif) { $('pilih').value = a; return nyalakan(a); } }
+      });
+    }).catch(function (e) { if (S === s) galat(e); });
+  }
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || typeof d !== 'object' || !d.rrKamera || !sahAsal(e.origin)) return;
+    if (d.rrKamera === 'halo') { try { e.source.postMessage({ rrKamera: 'siap' }, e.origin); } catch (x) {} return; }
+    if (d.rrKamera !== 'buka') return;
+    if (S) selesai({ batal: true });
+    S = { id: d.id, mode: d.mode === 'foto' ? 'foto' : 'qr', sumber: e.source, asal: e.origin, depan: !!d.depan };
+    $('judul').textContent = d.judul || (S.mode === 'qr' ? 'Pindai kartu / barcode' : 'Ambil foto');
+    $('ket').textContent = d.ket || (S.mode === 'qr' ? 'Arahkan kartu WBP atau barcode pengunjung ke kamera. Kode terbaca otomatis.' : 'Atur posisi, lalu tekan "Ambil foto".');
+    $('ambil').hidden = S.mode !== 'foto';
+    $('layar').textContent = 'Menyalakan kamera…';
+    document.getElementById('km').hidden = false;
+    nyalakan(tersimpan(S.mode));
+  });
+  $('pilih').onchange = function () { if (!S) return; simpan(S.mode, this.value); S.sudahPilih = true; nyalakan(this.value); };
+  $('tutup').onclick = $('batal').onclick = function () { selesai({ batal: true }); };
+  $('ambil').onclick = function () {
+    var s = S; if (!s || !s.video || !s.video.videoWidth) return;
+    var c = document.createElement('canvas'), k = Math.min(1, 1280 / s.video.videoWidth);
+    c.width = Math.round(s.video.videoWidth * k); c.height = Math.round(s.video.videoHeight * k);
+    c.getContext('2d').drawImage(s.video, 0, 0, c.width, c.height);
+    if ($('pilih').value) simpan('foto', $('pilih').value);
+    selesai({ foto: c.toDataURL('image/jpeg', .9) });
+  };
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && S) selesai({ batal: true }); });
+})();
 </script>
 </body>
 </html>
