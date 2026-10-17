@@ -75,13 +75,38 @@
  * Halaman ini menyalakan kamera, lalu membalas { rrKamera: 'hasil', id, teks } (QR), { ..., foto: dataURL } (foto)
  * atau { ..., batal: true }. Pesan hanya diterima dari halaman Google Apps Script. */
 (function () {
-  var HTML5QR = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+  /* pustaka pemindai QR: dicoba dari beberapa server cadangan (bila satu server gangguan / diblokir jaringan) */
+  var HTML5QR = ['https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
+    'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js'];
   function $(id) { return document.getElementById('km-' + id); }
   function sahAsal(o) { return /^https:\/\/([a-z0-9-]+\.)*(googleusercontent\.com|google\.com)$/i.test(o); }
   var S = null;
   function simpan(mode, id) { try { localStorage.setItem('rrKamera:' + mode, id || ''); } catch (e) {} }
   function tersimpan(mode) { try { return localStorage.getItem('rrKamera:' + mode) || ''; } catch (e) { return ''; } }
-  function muatSkrip(url) { return new Promise(function (res, rej) { if (window.Html5Qrcode) return res(); var s = document.createElement('script'); s.src = url; s.onload = res; s.onerror = function () { rej(new Error('Pustaka pemindai QR gagal dimuat. Periksa koneksi internet.')); }; document.head.appendChild(s); }); }
+  function satuSkrip(url) {
+    return new Promise(function (res, rej) {
+      var s = document.createElement('script'), t = setTimeout(function () { s.onload = s.onerror = null; s.remove(); rej(); }, 12000);
+      s.src = url; s.async = true;
+      s.onload = function () { clearTimeout(t); window.Html5Qrcode ? res() : rej(); };
+      s.onerror = function () { clearTimeout(t); s.remove(); rej(); };
+      document.head.appendChild(s);
+    });
+  }
+  var JANJI_QR = null;
+  function muatSkrip(daftar) {
+    if (window.Html5Qrcode) return Promise.resolve();
+    if (JANJI_QR) return JANJI_QR;
+    var i = 0;
+    function coba() {
+      if (i >= daftar.length) return Promise.reject(new Error('Pustaka pemindai QR gagal dimuat dari semua server. Periksa koneksi internet, lalu coba lagi.'));
+      return satuSkrip(daftar[i++]).catch(coba);
+    }
+    JANJI_QR = coba().catch(function (e) { JANJI_QR = null; throw e; });
+    return JANJI_QR;
+  }
+  /* muat lebih awal (saat halaman santai) agar pindai pertama langsung siap */
+  setTimeout(function () { muatSkrip(HTML5QR).catch(function () {}); }, 4000);
   function balas(isi) { if (!S) return; try { S.sumber.postMessage(Object.assign({ rrKamera: 'hasil', id: S.id }, isi), S.asal); } catch (e) {} }
   function hentikan() {
     if (!S) return Promise.resolve();
@@ -103,6 +128,7 @@
           : 'Izin kamera ditolak. Klik ikon kamera / gembok di bilah alamat, pilih Izinkan untuk Kamera, lalu muat ulang halaman.')
       : /NotFound|not found/i.test(m) ? 'Kamera tidak ditemukan. Pastikan webcam / kamera USB terpasang.'
       : /NotReadable|Could not start/i.test(m) ? 'Kamera sedang dipakai aplikasi lain (Zoom / WhatsApp). Tutup aplikasi itu lalu coba lagi.'
+      : /Pustaka pemindai/i.test(m) ? m.replace(/^Error\s*/, '').replace(/</g, '&lt;')
       : 'Kamera tidak bisa dibuka: ' + m.replace(/</g, '&lt;');
     $('layar').innerHTML = '<div class="galat">' + t + '</div>';
   }
