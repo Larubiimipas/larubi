@@ -178,6 +178,7 @@
   window.addEventListener('message', function (e) {
     var d = e.data;
     if (!d || typeof d !== 'object' || !d.rrKamera || !sahAsal(e.origin)) return;
+    if (d.rrKamera === 'diag') { window.rrDiagnosaKamera = d.info; try { console.info('La Rubi kamera:', JSON.stringify(d.info)); } catch (x) {} return; }
     if (d.rrKamera === 'halo') { try { e.source.postMessage({ rrKamera: 'siap' }, e.origin); } catch (x) {} return; }
     if (d.rrKamera !== 'buka') return;
     if (S) selesai({ batal: true });
