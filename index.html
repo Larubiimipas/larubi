@@ -48,6 +48,32 @@
   #km .btn.utama { background: #16304F; border-color: #16304F; color: #fff; }
   #km .galat { color: #fca5a5; font-weight: 700; padding: 16px; line-height: 1.5; }
   @media (max-width: 560px) { #km .baris { grid-template-columns: 1fr; } }
+  /* ===== pemindai HP (layar penuh, seperti pemindai QR bawaan HP) ===== */
+  #hq { position: fixed; inset: 0; z-index: 30; background: #000; overflow: hidden; }
+  #hq[hidden] { display: none; }
+  #hq video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  #hq .gelap { position: absolute; inset: 0; pointer-events: none; }
+  #hq .bingkai { position: absolute; left: 50%; top: 42%; width: min(68vw, 62vh); aspect-ratio: 1 / 1; transform: translate(-50%, -50%);
+    box-shadow: 0 0 0 200vmax rgba(0, 0, 0, .45); border-radius: 4px; }
+  #hq .bingkai i { position: absolute; width: 34px; height: 34px; border: 4px solid #fff; }
+  #hq .bingkai i:nth-child(1) { left: -2px; top: -2px; border-right: 0; border-bottom: 0; }
+  #hq .bingkai i:nth-child(2) { right: -2px; top: -2px; border-left: 0; border-bottom: 0; }
+  #hq .bingkai i:nth-child(3) { left: -2px; bottom: -2px; border-right: 0; border-top: 0; }
+  #hq .bingkai i:nth-child(4) { right: -2px; bottom: -2px; border-left: 0; border-top: 0; }
+  #hq .garis { position: absolute; left: 4%; right: 4%; height: 3px; top: 8%; border-radius: 3px;
+    background: linear-gradient(90deg, transparent, #fff 25%, #fff 75%, transparent); box-shadow: 0 0 10px rgba(255, 255, 255, .8); animation: hqGaris 2.2s ease-in-out infinite; }
+  @keyframes hqGaris { 0% { top: 8%; } 50% { top: 90%; } 100% { top: 8%; } }
+  #hq .teks { position: absolute; left: 0; right: 0; top: calc(42% + min(34vw, 31vh) + 18px); text-align: center; color: #fff; font: 600 16px/1.4 system-ui, sans-serif;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, .8); padding: 0 20px; }
+  #hq .bawah { position: absolute; left: 0; right: 0; bottom: max(28px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 0 20px; }
+  #hq .bawah button { min-height: 48px; padding: 0 22px; border-radius: 24px; border: 0; background: #fff; color: #16304F; font: 700 15px system-ui, sans-serif; }
+  #hq .tutup { position: absolute; top: max(16px, env(safe-area-inset-top)); left: 16px; width: 48px; height: 48px; border-radius: 50%; border: 0;
+    background: rgba(0, 0, 0, .45); color: #fff; font-size: 24px; line-height: 1; }
+  #hq .ok { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+    background: rgba(21, 128, 61, .82); color: #fff; font: 800 22px system-ui, sans-serif; }
+  #hq .ok[hidden] { display: none; }
+  #hq .ok span { width: 84px; height: 84px; border-radius: 50%; background: #fff; color: #15803D; display: grid; place-items: center; font-size: 52px; line-height: 1; }
+  #hq .galat { color: #fecaca; }
 </style>
 </head>
 <body>
@@ -57,6 +83,15 @@
   allowfullscreen
   onload="document.getElementById('muat').style.display='none'"></iframe>
 
+<div id="hq" hidden role="dialog" aria-modal="true" aria-label="Pindai kode QR">
+  <div class="bingkai"><i></i><i></i><i></i><i></i><span class="garis"></span></div>
+  <div class="teks" id="hq-teks">Letakkan kode dalam bingkai</div>
+  <div class="bawah" id="hq-bawah"></div>
+  <button type="button" class="tutup" id="hq-tutup" aria-label="Tutup">&#x2715;</button>
+  <div class="ok" id="hq-ok" hidden><span>&#10003;</span>Kode terbaca</div>
+  <input type="file" id="hq-file" accept="image/*" capture="environment" hidden>
+  <div id="hq-baca" hidden></div>
+</div>
 <div id="km" hidden role="dialog" aria-modal="true">
   <div class="kotak">
     <div class="atas"><span id="km-judul">Kamera</span><button type="button" id="km-tutup" aria-label="Tutup">&#x2715;</button></div>
@@ -189,6 +224,7 @@
     if (d.rrKamera === 'diag') { window.rrDiagnosaKamera = d.info; try { console.info('La Rubi kamera:', JSON.stringify(d.info)); } catch (x) {} return; }
     if (d.rrKamera === 'halo') { try { e.source.postMessage({ rrKamera: 'siap' }, e.origin); } catch (x) {} return; }
     if (d.rrKamera !== 'buka') return;
+    if (d.hp && d.mode !== 'foto') { if (S) selesai({ batal: true }); bukaHp(d, e); return; }      // HP: pemindai layar penuh
     if (S) selesai({ batal: true });
     S = { id: d.id, mode: d.mode === 'foto' ? 'foto' : 'qr', sumber: e.source, asal: e.origin, depan: !!d.depan };
     $('judul').textContent = d.judul || (S.mode === 'qr' ? 'Pindai kartu / barcode' : 'Ambil foto');
@@ -199,6 +235,99 @@
     nyalakan(tersimpan(S.mode));
   });
   $('pilih').onchange = function () { if (!S) return; simpan(S.mode, this.value); S.sudahPilih = true; nyalakan(this.value); };
+
+  /* ============ PEMINDAI HP ============
+   * Dipakai bila La Rubi meminta { rrKamera: 'buka', mode: 'qr', hp: true }. Layar penuh, kamera belakang, kode dibaca
+   * dengan pembaca bawaan Chrome (BarcodeDetector) atau pustaka html5-qrcode. Kode terbaca otomatis tanpa memotret.
+   * Kamera tidak bisa dibuka / belum terbaca: tombol "Potret dengan kamera HP" (kode dibaca dari foto). */
+  var H = null;
+  function hq(id) { return document.getElementById('hq-' + id); }
+  function bunyi() { try { var A = window.AudioContext || window.webkitAudioContext; if (!A) return; var c = bunyi.c || (bunyi.c = new A()), o = c.createOscillator(), g = c.createGain(); o.frequency.value = 1320; g.gain.value = .08; o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + .12); } catch (e) {} }
+  function hqBalas(isi) { if (!H) return; try { H.sumber.postMessage(Object.assign({ rrKamera: 'hasil', id: H.id }, isi), H.asal); } catch (e) {} }
+  function hqHenti() { if (!H) return; clearTimeout(H.tBantu); clearTimeout(H.tBaca); H.henti = true; if (H.alur) H.alur.getTracks().forEach(function (t) { t.stop(); }); var v = document.querySelector('#hq video'); if (v) v.remove(); }
+  function hqTutup(isi) { if (!H) return; hqBalas(isi); hqHenti(); document.getElementById('hq').hidden = true; H = null; }
+  function hqBerhasil(teks) {
+    if (!H || H.dapat) return; H.dapat = true;
+    try { navigator.vibrate && navigator.vibrate([60, 40, 60]); } catch (e) {}
+    bunyi(); hq('ok').hidden = false;
+    var h = H; setTimeout(function () { if (H === h) hqTutup({ teks: teks }); }, 450);
+  }
+  function hqTombolPotret(pesan, galat) {
+    hq('teks').innerHTML = pesan; hq('teks').className = 'teks' + (galat ? ' galat' : '');
+    hq('bawah').innerHTML = '<button type="button" id="hq-potret">Potret dengan kamera HP</button>';
+    document.getElementById('hq-potret').onclick = function () { hq('file').click(); };
+  }
+  function perkecil(file, maks, potong) {
+    return new Promise(function (res, rej) {
+      var img = new Image();
+      img.onload = function () {
+        var k = potong || 1, sw = img.width * k, sh = img.height * k, sx = (img.width - sw) / 2, sy = (img.height - sh) / 2;
+        var sk = Math.min(1, maks / Math.max(sw, sh)), c = document.createElement('canvas');
+        c.width = Math.round(sw * sk); c.height = Math.round(sh * sk); c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(img.src); c.toBlob(function (b) { b ? res(new File([b], 'qr.jpg', { type: 'image/jpeg' })) : rej(new Error('foto')); }, 'image/jpeg', .9);
+      };
+      img.onerror = rej; img.src = URL.createObjectURL(file);
+    });
+  }
+  var PEMBACA = null;
+  function bacaFile(f) {
+    return muatSkrip(HTML5QR).then(function () {
+      PEMBACA = PEMBACA || new Html5Qrcode('hq-baca', { verbose: false });
+      var coba = [function () { return perkecil(f, 1280); }, function () { return perkecil(f, 1280, .55); }, function () { return Promise.resolve(f); }];
+      return coba.reduce(function (p, buat) { return p.then(function (t) { return t || buat().then(function (x) { return PEMBACA.scanFile(x, false); }).catch(function () { return ''; }); }); }, Promise.resolve(''));
+    });
+  }
+  hq('file').onchange = function () {
+    var f = this.files && this.files[0]; this.value = ''; if (!f || !H) return;
+    hq('teks').textContent = 'Membaca kode dari foto…'; hq('teks').className = 'teks';
+    bacaFile(f).then(function (t) { if (t) hqBerhasil(t); else hqTombolPotret('Kode tidak terbaca dari foto. Potret lebih dekat dan pastikan terang.', true); })
+      .catch(function () { hqTombolPotret('Kode tidak terbaca. Periksa koneksi internet lalu coba lagi.', true); });
+  };
+  function hqBacaLoop(v) {
+    var h = H, detektor = null, kanvas = document.createElement('canvas');
+    try { if ('BarcodeDetector' in window) detektor = new BarcodeDetector({ formats: ['qr_code'] }); } catch (e) { detektor = null; }
+    function langkah() {
+      if (H !== h || h.henti || h.dapat) return;
+      if (!v.videoWidth) { h.tBaca = setTimeout(langkah, 150); return; }
+      var tugas;
+      if (detektor) tugas = detektor.detect(v).then(function (l) { return l && l[0] ? l[0].rawValue : ''; });
+      else {
+        var k = Math.min(1, 960 / Math.max(v.videoWidth, v.videoHeight)); kanvas.width = Math.round(v.videoWidth * k); kanvas.height = Math.round(v.videoHeight * k);
+        kanvas.getContext('2d').drawImage(v, 0, 0, kanvas.width, kanvas.height);
+        tugas = new Promise(function (r) { kanvas.toBlob(r, 'image/jpeg', .85); }).then(function (b) {
+          return muatSkrip(HTML5QR).then(function () { PEMBACA = PEMBACA || new Html5Qrcode('hq-baca', { verbose: false }); return PEMBACA.scanFile(new File([b], 'f.jpg', { type: 'image/jpeg' }), false); });
+        });
+      }
+      tugas.then(function (t) { if (t) hqBerhasil(t); else h.tBaca = setTimeout(langkah, detektor ? 120 : 350); })
+        .catch(function () { h.tBaca = setTimeout(langkah, detektor ? 200 : 500); });
+    }
+    langkah();
+  }
+  function bukaHp(d, e) {
+    if (H) hqTutup({ batal: true });
+    H = { id: d.id, sumber: e.source, asal: e.origin };
+    hq('ok').hidden = true; hq('bawah').innerHTML = ''; hq('teks').className = 'teks'; hq('teks').textContent = 'Menyalakan kamera…';
+    document.getElementById('hq').hidden = false;
+    var h = H;
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 }, advanced: [{ focusMode: 'continuous' }] }, audio: false })
+      .then(function (alur) {
+        if (H !== h) { alur.getTracks().forEach(function (t) { t.stop(); }); return; }
+        h.alur = alur;
+        var v = document.createElement('video'); v.autoplay = true; v.muted = true; v.playsInline = true; v.setAttribute('playsinline', ''); v.srcObject = alur;
+        document.getElementById('hq').insertBefore(v, document.getElementById('hq').firstChild);
+        v.play().catch(function () {});
+        hq('teks').textContent = d.ket || 'Letakkan kode dalam bingkai';
+        hqBacaLoop(v);
+        h.tBantu = setTimeout(function () { if (H === h && !h.dapat) hqTombolPotret('Belum terbaca? Dekatkan kartu (15–25 cm) dan pastikan cukup terang.'); }, 12000);
+      })
+      .catch(function (err) {
+        if (H !== h) return;
+        var m = String((err && err.name) || '') + ' ' + String((err && err.message) || '');
+        hqTombolPotret(/NotAllowed|Permission/i.test(m) ? 'Izin kamera ditolak. Izinkan kamera untuk La Rubi di pengaturan HP, atau pindai dengan memotret kartu.' : 'Kamera tidak bisa dibuka di HP ini. Pindai dengan memotret kartu.', true);
+      });
+    muatSkrip(HTML5QR).catch(function () {});
+  }
+  hq('tutup').onclick = function () { hqTutup({ batal: true }); };
   $('tutup').onclick = $('batal').onclick = function () { selesai({ batal: true }); };
   $('ambil').onclick = function () {
     var s = S; if (!s || !s.video || !s.video.videoWidth) return;
@@ -209,6 +338,7 @@
     selesai({ foto: c.toDataURL('image/jpeg', .9) });
   };
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && S) selesai({ batal: true }); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && H) hqTutup({ batal: true }); });
 })();
 </script>
 <script>
