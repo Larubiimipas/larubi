@@ -24,10 +24,17 @@
 <style>
   html, body { margin: 0; padding: 0; height: 100%; background: #16304F; overflow: hidden; font-family: system-ui, "Segoe UI", Arial, sans-serif; }
   #larubi { position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: 0; display: block; }
-  #muat { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 14px; color: #fff; font: 600 16px/1.4 sans-serif; background: #16304F; }
-  #muat span { width: 34px; height: 34px; border: 4px solid rgba(255,255,255,.25); border-top-color: #D9B36C; border-radius: 50%; animation: p .8s linear infinite; }
-  @keyframes p { to { transform: rotate(360deg); } }
+  /* layar pembuka: logo + "Memuat" + persen (perkiraan tahap pemuatan; tidak menambah data yang diunduh) */
+  #muat { position: fixed; inset: 0; z-index: 5; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 12px; color: #fff; font: 600 16px/1.4 system-ui, "Segoe UI", sans-serif; background: #16304F; transition: opacity .35s ease; }
+  #muat.selesai { opacity: 0; pointer-events: none; }
+  #muat .logo { width: 112px; height: 112px; border-radius: 26px; object-fit: contain; animation: muatDenyut 1.6s ease-in-out infinite; }
+  @keyframes muatDenyut { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+  #muat .nama { font-size: 22px; font-weight: 800; letter-spacing: .02em; margin-top: 4px; }
+  #muat .teks { font-size: 14px; color: rgba(255, 255, 255, .78); }
+  #muat .teks b { color: #E2C178; font-variant-numeric: tabular-nums; }
+  #muat .bar { width: min(220px, 60vw); height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .18); overflow: hidden; }
+  #muat .bar i { display: block; height: 100%; width: 0; border-radius: 3px; background: linear-gradient(90deg, #D9B36C, #F3D99A); transition: width .25s ease; }
   /* jendela kamera */
   #km { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(11,28,51,.75); }
   #km[hidden] { display: none; }
@@ -77,11 +84,15 @@
 </style>
 </head>
 <body>
-<div id="muat"><span></span>Membuka La Rubi&hellip;</div>
+<div id="muat" role="status" aria-live="polite">
+  <img class="logo" src="ikon/ikon-192.png" alt="">
+  <div class="nama">La Rubi</div>
+  <div class="teks">Memuat&hellip; <b id="muat-persen">0%</b></div>
+  <div class="bar"><i id="muat-bar"></i></div>
+</div>
 <iframe id="larubi" title="La Rubi"
   allow="camera; microphone; fullscreen; autoplay; clipboard-write"
-  allowfullscreen
-  onload="document.getElementById('muat').style.display='none'"></iframe>
+  allowfullscreen></iframe>
 
 <div id="hq" hidden role="dialog" aria-modal="true" aria-label="Pindai kode QR">
   <div class="bingkai"><i></i><i></i><i></i><i></i><span class="garis"></span></div>
@@ -110,7 +121,33 @@
 <script>
   var URL_LARUBI = 'https://script.google.com/macros/s/AKfycbztaNwcT3-IKVf0yCCNP4M8wsaOvfrHPxFfUl-E7tEoHaSndUQL3VxwSTQXLeKY-gY_/exec';
   /* link khusus (TPP, Kepala Rutan, barcode kunjungan, bukti titipan: ?page=...) tetap diteruskan ke La Rubi */
-  document.getElementById('larubi').src = URL_LARUBI + (location.search || '') + (location.hash || '');
+  /* layar pembuka: persen naik mengikuti tahap pemuatan (browser tidak memberi angka unduhan halaman Google),
+     selesai saat La Rubi memberi tanda siap. Tidak menambah unduhan: logo sudah tersimpan di HP. */
+  (function () {
+    var muat = document.getElementById('muat'), bar = document.getElementById('muat-bar'), teks = document.getElementById('muat-persen');
+    var P = 0, batas = 35, beres = false, mulai = Date.now();
+    function tulis(v) { P = Math.max(P, Math.min(100, v)); bar.style.width = P + '%'; teks.textContent = Math.floor(P) + '%'; }
+    var t = setInterval(function () {
+      if (beres) return;
+      tulis(P + Math.max(0.15, (batas - P) * 0.05));
+      if (Date.now() - mulai > 25000) selesai();                 // pengaman: jangan pernah tertahan di layar pembuka
+    }, 80);
+    function selesai() {
+      if (beres) return; beres = true; clearInterval(t); tulis(100);
+      setTimeout(function () { muat.classList.add('selesai'); setTimeout(function () { muat.style.display = 'none'; }, 400); }, 200);
+    }
+    window.rrMuatSelesai = selesai;
+    tulis(5);
+    var bingkai = document.getElementById('larubi');
+    bingkai.addEventListener('load', function () { batas = 92; tulis(55); setTimeout(selesai, 8000); });   // bingkai Google termuat; isi La Rubi menyusul
+    window.addEventListener('message', function (e) {
+      var d = e.data, a = String(e.origin || '');
+      if (!d || typeof d !== 'object' || !/(^https:\/\/script\.google\.com$)|(\.googleusercontent\.com$)/.test(a)) return;
+      if (d.rrSiap) selesai();                                    // tanda siap dari La Rubi (beranda tampil)
+      else if (d.rrKamera === 'diag') { batas = 97; tulis(80); }   // skrip La Rubi sudah berjalan
+    });
+    bingkai.src = URL_LARUBI + (location.search || '') + (location.hash || '');
+  })();
 </script>
 <script>
 /* ============ LAYANAN KAMERA UNTUK LA RUBI ============
