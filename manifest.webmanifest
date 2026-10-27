@@ -1,0 +1,19 @@
+{
+  "id": "/larubi/",
+  "name": "La Rubi - Layanan Rutan Raba Bima",
+  "short_name": "La Rubi",
+  "description": "Layanan Rutan Kelas IIB Raba Bima: kunjungan, izin luar biasa, database WBP, presensi, titipan, dan layanan lainnya.",
+  "lang": "id",
+  "start_url": "/larubi/",
+  "scope": "/larubi/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#16304F",
+  "theme_color": "#16304F",
+  "categories": ["government", "productivity"],
+  "icons": [
+    { "src": "ikon/ikon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "ikon/ikon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "ikon/ikon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

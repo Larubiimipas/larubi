@@ -4,8 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>La Rubi - Layanan Rutan Raba Bima</title>
+<!-- aplikasi terpasang (PWA): "Instal aplikasi" di Chrome & APK dari PWABuilder -->
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#16304F">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="La Rubi">
+<link rel="icon" type="image/png" sizes="192x192" href="ikon/ikon-192.png">
+<link rel="apple-touch-icon" href="ikon/apple-touch-icon.png">
 <!--
-  Pembungkus La Rubi untuk dibuka di browser (GitHub Pages) dan aplikasi Kodular.
+  Pembungkus La Rubi untuk dibuka di browser (GitHub Pages) dan aplikasi terpasang (PWA / APK PWABuilder).
   1. La Rubi dibuka di dalam bingkai (iframe), sehingga pesan Google
      "Aplikasi ini dibuat oleh pengguna Google Apps Script" tidak tampil.
   2. KAMERA LAPTOP: halaman Google Apps Script tidak diizinkan memakai kamera. Halaman pembungkus ini yang
@@ -202,6 +210,10 @@
   };
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && S) selesai({ batal: true }); });
 })();
+</script>
+<script>
+  /* PWA: service worker (dibutuhkan agar La Rubi bisa diinstal sebagai aplikasi) */
+  if ('serviceWorker' in navigator) window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
 </script>
 </body>
 </html>
