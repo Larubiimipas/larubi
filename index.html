@@ -379,6 +379,41 @@
 })();
 </script>
 <script>
+/* JEMBATAN SUARA untuk asisten La Rubi (Asisten_Js). Halaman Apps Script tidak boleh memakai mikrofon,
+ * jadi pengenal suara dijalankan di halaman ini. Hanya bekerja saat diminta (tombol maskot ditekan);
+ * tidak ada yang berjalan atau diunduh selama asisten tidak dipakai.
+ * Pesan: { rrSuara: 'halo' } -> { rrSuara: 'siap', bisa }, { rrSuara: 'dengar', id } -> 'sela' (sementara) lalu 'hasil' { teks, alt } / { galat }. */
+(function () {
+  function sahAsal(o) { return /^https:\/\/([a-z0-9-]+\.)*(googleusercontent\.com|google\.com)$/i.test(o); }
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition, aktif = null;
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || typeof d !== 'object' || !d.rrSuara || !sahAsal(e.origin)) return;
+    var balas = function (isi) { try { e.source.postMessage(isi, e.origin); } catch (x) {} };
+    if (d.rrSuara === 'halo') { balas({ rrSuara: 'siap', bisa: !!SR }); return; }
+    if (d.rrSuara === 'henti') { if (aktif && aktif.id === d.id) { try { aktif.r.abort(); } catch (x) {} } return; }
+    if (d.rrSuara !== 'dengar') return;
+    if (!SR) { balas({ rrSuara: 'hasil', id: d.id, galat: 'tidak-didukung' }); return; }
+    if (aktif) { try { aktif.r.abort(); } catch (x) {} }
+    var r = new SR(), alt = [], selesai = false, id = d.id;
+    r.lang = d.lang || 'id-ID'; r.interimResults = true; r.maxAlternatives = 3; r.continuous = false;
+    aktif = { id: id, r: r };
+    function akhir(isi) { if (selesai) return; selesai = true; if (aktif && aktif.r === r) aktif = null; balas(Object.assign({ rrSuara: 'hasil', id: id }, isi)); }
+    r.onresult = function (ev) {
+      var sela = '';
+      for (var i = ev.resultIndex; i < ev.results.length; i++) {
+        if (ev.results[i].isFinal) { alt = []; for (var j = 0; j < ev.results[i].length; j++) alt.push(ev.results[i][j].transcript); }
+        else sela += ev.results[i][0].transcript;
+      }
+      if (!alt.length && sela) balas({ rrSuara: 'sela', id: id, teks: sela });
+    };
+    r.onerror = function (ev) { akhir({ galat: ev.error || 'gagal' }); };
+    r.onend = function () { akhir(alt.length ? { teks: alt[0], alt: alt } : { galat: 'no-speech' }); };
+    try { r.start(); } catch (x) { akhir({ galat: 'gagal' }); }
+  });
+})();
+</script>
+<script>
   /* PWA: service worker (dibutuhkan agar La Rubi bisa diinstal sebagai aplikasi) */
   if ('serviceWorker' in navigator) window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
 </script>

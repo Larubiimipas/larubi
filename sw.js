@@ -1,7 +1,7 @@
 /* La Rubi - service worker (syarat aplikasi terpasang / PWABuilder).
  * Hanya halaman pembungkus ini yang disimpan untuk cadangan saat sinyal hilang.
  * Data La Rubi (Google Apps Script) TIDAK disimpan di HP: selalu diambil langsung dari server. */
-var CACHE = 'larubi-v5';
+var CACHE = 'larubi-v6';
 var CADANGAN = ['./', './index.html', './manifest.webmanifest', './ikon/ikon-192.png', './ikon/maskot.webp'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(CADANGAN); }).then(function () { return self.skipWaiting(); }));
