@@ -382,7 +382,8 @@
 /* JEMBATAN SUARA untuk asisten La Rubi (Asisten_Js). Halaman Apps Script tidak boleh memakai mikrofon,
  * jadi pengenal suara dijalankan di halaman ini. Hanya bekerja saat diminta (tombol maskot ditekan);
  * tidak ada yang berjalan atau diunduh selama asisten tidak dipakai.
- * Pesan: { rrSuara: 'halo' } -> { rrSuara: 'siap', bisa }, { rrSuara: 'dengar', id } -> 'sela' (sementara) lalu 'hasil' { teks, alt } / { galat }. */
+ * Pesan: { rrSuara: 'halo' } -> { rrSuara: 'siap', bisa }, { rrSuara: 'dengar', id } -> 'sela' (sementara) lalu 'hasil' { teks, alt } / { galat }.
+ * { rrSuara: 'status', aktif } (asisten bangun / tidur), { rrSuara: 'panggil', nyala } (panggilan "Halo La Rubi"); ke La Rubi: { rrSuara: 'bangun' }. */
 (function () {
   function sahAsal(o) { return /^https:\/\/([a-z0-9-]+\.)*(googleusercontent\.com|google\.com)$/i.test(o); }
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition, aktif = null;
@@ -392,8 +393,16 @@
     var balas = function (isi) { try { e.source.postMessage(isi, e.origin); } catch (x) {} };
     if (d.rrSuara === 'halo') { balas({ rrSuara: 'siap', bisa: !!SR }); return; }
     if (d.rrSuara === 'henti') { if (aktif && aktif.id === d.id) { try { aktif.r.abort(); } catch (x) {} } return; }
+    if (d.rrSuara === 'status') {
+      ASISTEN = !!d.aktif;
+      if (ASISTEN) hentiPanggil();
+      else jadwalPanggil(800);
+      return;
+    }
+    if (d.rrSuara === 'panggil') { aturPanggil(!!d.nyala); balas({ rrSuara: 'panggil', nyala: !!d.nyala }); return; }
     if (d.rrSuara !== 'dengar') return;
     if (!SR) { balas({ rrSuara: 'hasil', id: d.id, galat: 'tidak-didukung' }); return; }
+    hentiPanggil();
     if (aktif) { try { aktif.r.abort(); } catch (x) {} }
     var r = new SR(), alt = [], selesai = false, id = d.id;
     r.lang = d.lang || 'id-ID'; r.interimResults = true; r.maxAlternatives = 3; r.continuous = false;
@@ -411,6 +420,65 @@
     r.onend = function () { akhir(alt.length ? { teks: alt[0], alt: alt } : { galat: 'no-speech' }); };
     try { r.start(); } catch (x) { akhir({ galat: 'gagal' }); }
   });
+
+  /* ---------- PANGGILAN "HALO LA RUBI" ----------
+   * MATI secara bawaan. Menyala bila pengguna berkata "La Rubi bangun" kepada asisten; sejak itu halaman ini mendengarkan
+   * "Halo La Rubi" / "La Rubi bangun" selama aplikasi terbuka di layar & asisten sedang tidur, lalu membangunkan asisten.
+   * Mati lagi dengan "La Rubi silahkan tidur" (kapan saja) atau menekan lencana. Berhenti juga saat aplikasi di belakang layar.
+   * Hanya kata panggilan yang diperiksa; tidak ada suara yang disimpan atau dikirim ke La Rubi. */
+  var ASISTEN = false, PANGGIL = null, T_PANGGIL = null, GAGAL = 0;
+  var NAMA = '(la\\s?rubi|larubi|la\\s?ruby|la\\s?rubby|lar\\s?rubi)';
+  var POLA_PANGGIL = new RegExp('\\b(halo|hallo|helo|hello|alo|hai|hay|hi)\\b[\\s,]*' + NAMA + '\\b|\\b' + NAMA + '[\\s,]*bangun\\b', 'i');
+  var POLA_TIDUR = new RegExp('\\b' + NAMA + '[\\s,]*(silahkan|silakan|sila)?\\s*tidur\\b', 'i');
+  function bacaPanggil() { try { var v = localStorage.getItem('rrPanggil'); return v === null ? null : v === '1'; } catch (x) { return null; } }
+  function aturPanggil(nyala) { try { localStorage.setItem('rrPanggil', nyala ? '1' : '0'); } catch (x) {} if (nyala) jadwalPanggil(300); else hentiPanggil(); tandaPanggil(); }
+  var lencana = null;
+  function tandaPanggil() {
+    var nyala = bacaPanggil() === true && !!SR;
+    if (!lencana) {
+      lencana = document.createElement('button'); lencana.type = 'button'; lencana.id = 'rr-panggil';
+      lencana.setAttribute('aria-label', 'Panggilan suara La Rubi menyala. Tekan untuk mematikan.');
+      lencana.style.cssText = 'position:fixed;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:2147483000;border:0;border-radius:99px;padding:4px 9px;font:600 11px system-ui,sans-serif;background:rgba(22,48,79,.82);color:#F6EBD3;display:none;align-items:center;gap:5px;opacity:.85';
+      lencana.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:#E0B860;display:inline-block"></span>Halo La Rubi';
+      lencana.onclick = function () { aturPanggil(false); };
+      document.body.appendChild(lencana);
+    }
+    lencana.style.display = nyala && !ASISTEN ? 'inline-flex' : 'none';
+  }
+  function jadwalPanggil(ms) { clearTimeout(T_PANGGIL); T_PANGGIL = setTimeout(mulaiPanggil, ms || 0); tandaPanggil(); }
+  function hentiPanggil() { clearTimeout(T_PANGGIL); if (PANGGIL) { var r = PANGGIL; PANGGIL = null; try { r.abort(); } catch (x) {} } tandaPanggil(); }
+  function mulaiPanggil() {
+    tandaPanggil();
+    if (!SR || PANGGIL || ASISTEN || aktif || document.hidden || bacaPanggil() !== true) return;
+    var r = new SR(), kena = false;
+    r.lang = 'id-ID'; r.continuous = true; r.interimResults = true; r.maxAlternatives = 3;
+    PANGGIL = r;
+    r.onresult = function (ev) {
+      for (var i = ev.resultIndex; i < ev.results.length && !kena; i++) {
+        for (var j = 0; j < ev.results[i].length; j++) {
+          var tx = ev.results[i][j].transcript || '';
+          if (POLA_TIDUR.test(tx)) { kena = true; PANGGIL = null; try { r.abort(); } catch (x) {} aturPanggil(false); return; }   // "La Rubi silahkan tidur": panggilan mati
+          if (POLA_PANGGIL.test(tx)) { kena = true; break; }
+        }
+      }
+      if (!kena) return;
+      GAGAL = 0; PANGGIL = null; try { r.abort(); } catch (x) {}
+      var f = document.getElementById('larubi');
+      try { f.contentWindow.postMessage({ rrSuara: 'bangun' }, '*'); } catch (x) {}
+    };
+    r.onerror = function (ev) {
+      var g = ev.error || '';
+      if (g === 'not-allowed' || g === 'service-not-allowed') { aturPanggil(false); return; }   // izin mikrofon ditolak: matikan
+      if (g !== 'no-speech' && g !== 'aborted') GAGAL++;
+    };
+    r.onend = function () {
+      if (PANGGIL === r) PANGGIL = null;
+      if (!kena && bacaPanggil() === true && !ASISTEN && !aktif) jadwalPanggil(GAGAL ? Math.min(30000, 1500 * GAGAL) : 250);
+    };
+    try { r.start(); } catch (x) { PANGGIL = null; jadwalPanggil(3000); }
+  }
+  document.addEventListener('visibilitychange', function () { if (document.hidden) hentiPanggil(); else jadwalPanggil(600); });
+  window.addEventListener('load', function () { if (bacaPanggil() === true) jadwalPanggil(2500); });
 })();
 </script>
 <script>
