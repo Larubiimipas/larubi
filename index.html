@@ -400,6 +400,7 @@
       return;
     }
     if (d.rrSuara === 'panggil') { aturPanggil(!!d.nyala); balas({ rrSuara: 'panggil', nyala: !!d.nyala }); return; }
+    if (d.rrSuara === 'muatUlang') { hentiPanggil(); setTimeout(function () { location.reload(); }, 100); return; }   // perintah suara "refresh"
     if (d.rrSuara !== 'dengar') return;
     if (!SR) { balas({ rrSuara: 'hasil', id: d.id, galat: 'tidak-didukung' }); return; }
     hentiPanggil();
