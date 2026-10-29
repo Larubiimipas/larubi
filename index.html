@@ -386,9 +386,10 @@
  * { rrSuara: 'status', aktif } (asisten bangun / tidur), { rrSuara: 'panggil', nyala } (panggilan "Halo La Rubi"); ke La Rubi: { rrSuara: 'bangun' }. */
 (function () {
   function sahAsal(o) { return /^https:\/\/([a-z0-9-]+\.)*(googleusercontent\.com|google\.com)$/i.test(o); }
-  var SR = window.SpeechRecognition || window.webkitSpeechRecognition, aktif = null;
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition, aktif = null, JENDELA_APP = null;
   window.addEventListener('message', function (e) {
     var d = e.data;
+    if (d && typeof d === 'object' && sahAsal(e.origin) && e.source) JENDELA_APP = { w: e.source, asal: e.origin };   // jendela La Rubi (bingkai terdalam)
     if (!d || typeof d !== 'object' || !d.rrSuara || !sahAsal(e.origin)) return;
     var balas = function (isi) { try { e.source.postMessage(isi, e.origin); } catch (x) {} };
     if (d.rrSuara === 'halo') { balas({ rrSuara: 'siap', bisa: !!SR }); return; }
@@ -450,6 +451,13 @@
   }
   function jadwalPanggil(ms) { clearTimeout(T_PANGGIL); T_PANGGIL = setTimeout(mulaiPanggil, ms || 0); tandaPanggil(); }
   function hentiPanggil() { clearTimeout(T_PANGGIL); if (PANGGIL) { var r = PANGGIL; PANGGIL = null; try { r.abort(); } catch (x) {} } tandaPanggil(); }
+  /* La Rubi berada di bingkai terdalam halaman Google (bingkai di dalam bingkai): kirim ke jendela yang pernah
+     mengirim pesan ke sini; cadangannya, kirim ke semua bingkai di dalam bingkai La Rubi. */
+  function kirimKeApp(isi) {
+    if (JENDELA_APP) { try { JENDELA_APP.w.postMessage(isi, JENDELA_APP.asal); return; } catch (x) {} }
+    var f = document.getElementById('larubi');
+    (function sebar(w, n) { if (!w || n > 4) return; try { w.postMessage(isi, '*'); } catch (x) {} try { for (var i = 0; i < w.frames.length; i++) sebar(w.frames[i], n + 1); } catch (x) {} })(f && f.contentWindow, 0);
+  }
   function mulaiPanggil() {
     tandaPanggil();
     if (!SR || PANGGIL || ASISTEN || aktif || document.hidden || bacaPanggil() !== true) return;
@@ -466,8 +474,7 @@
       }
       if (!kena) return;
       GAGAL = 0; PANGGIL = null; try { r.abort(); } catch (x) {}
-      var f = document.getElementById('larubi');
-      try { f.contentWindow.postMessage({ rrSuara: 'bangun' }, '*'); } catch (x) {}
+      kirimKeApp({ rrSuara: 'bangun' });
     };
     r.onerror = function (ev) {
       var g = ev.error || '';
