@@ -422,14 +422,16 @@
   });
 
   /* ---------- PANGGILAN "HALO LA RUBI" ----------
-   * MATI secara bawaan. Menyala bila pengguna berkata "La Rubi bangun" kepada asisten; sejak itu halaman ini mendengarkan
-   * "Halo La Rubi" / "La Rubi bangun" selama aplikasi terbuka di layar & asisten sedang tidur, lalu membangunkan asisten.
-   * Mati lagi dengan "La Rubi silahkan tidur" (kapan saja) atau menekan lencana. Berhenti juga saat aplikasi di belakang layar.
+   * MATI secara bawaan. Menyala bila pengguna berkata "bangun" kepada asisten yang sedang aktif; sejak itu halaman ini
+   * mendengarkan kata "bangun" selama aplikasi terbuka di layar & asisten sedang tidur, lalu membangunkan asisten
+   * (La Rubi menjawab "Saya siap bekerja"). Mati lagi dengan "tidur" / "silahkan tidur" atau menekan lencana.
    * Hanya kata panggilan yang diperiksa; tidak ada suara yang disimpan atau dikirim ke La Rubi. */
   var ASISTEN = false, PANGGIL = null, T_PANGGIL = null, GAGAL = 0;
-  var NAMA = '(la\\s?rubi|larubi|la\\s?ruby|la\\s?rubby|lar\\s?rubi)';
-  var POLA_PANGGIL = new RegExp('\\b(halo|hallo|helo|hello|alo|hai|hay|hi)\\b[\\s,]*' + NAMA + '\\b|\\b' + NAMA + '[\\s,]*bangun\\b', 'i');
-  var POLA_TIDUR = new RegExp('\\b' + NAMA + '[\\s,]*(silahkan|silakan|sila)?\\s*tidur\\b', 'i');
+  /* Kata panggilan cukup "bangun" (boleh "ayo bangun", "La Rubi bangun", "halo La Rubi"); harus diucapkan tersendiri,
+     sehingga kata "bangun" di tengah kalimat (mis. "bangunan") tidak membangunkan La Rubi. */
+  var NAMA = '(?:la\\s?rubi|larubi|la\\s?ruby|la\\s?rubby|lar\\s?rubi|lah\\s?rubi|lo\\s?rubi|rubi|ruby)';
+  var POLA_PANGGIL = new RegExp('^\\s*(?:(?:ayo|hei|hai|halo|hallo|helo|hello|oke|ok|ya|' + NAMA + ')[\\s,.!]*)*bangun(?:[\\s,.!]*(?:' + NAMA + '|dong|ya|sekarang))*[\\s.!]*$|^\\s*(?:halo|hallo|helo|hello|hai|hei)[\\s,]*' + NAMA + '[\\s.!]*$', 'i');
+  var POLA_TIDUR = new RegExp('^\\s*(?:(?:ayo|oke|ok|' + NAMA + ')[\\s,.!]*)*(?:silahkan|silakan|sila)?\\s*tidur(?:[\\s,.!]*(?:' + NAMA + '|dulu|ya|sana))*[\\s.!]*$', 'i');
   function bacaPanggil() { try { var v = localStorage.getItem('rrPanggil'); return v === null ? null : v === '1'; } catch (x) { return null; } }
   function aturPanggil(nyala) { try { localStorage.setItem('rrPanggil', nyala ? '1' : '0'); } catch (x) {} if (nyala) jadwalPanggil(300); else hentiPanggil(); tandaPanggil(); }
   var lencana = null;
@@ -439,7 +441,7 @@
       lencana = document.createElement('button'); lencana.type = 'button'; lencana.id = 'rr-panggil';
       lencana.setAttribute('aria-label', 'Panggilan suara La Rubi menyala. Tekan untuk mematikan.');
       lencana.style.cssText = 'position:fixed;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));z-index:2147483000;border:0;border-radius:99px;padding:4px 9px;font:600 11px system-ui,sans-serif;background:rgba(22,48,79,.82);color:#F6EBD3;display:none;align-items:center;gap:5px;opacity:.85';
-      lencana.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:#E0B860;display:inline-block"></span>Halo La Rubi';
+      lencana.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;background:#E0B860;display:inline-block"></span>Ucapkan "bangun"';
       lencana.onclick = function () { aturPanggil(false); };
       document.body.appendChild(lencana);
     }
@@ -456,7 +458,7 @@
     r.onresult = function (ev) {
       for (var i = ev.resultIndex; i < ev.results.length && !kena; i++) {
         for (var j = 0; j < ev.results[i].length; j++) {
-          var tx = ev.results[i][j].transcript || '';
+          var tx = String(ev.results[i][j].transcript || '').trim();
           if (POLA_TIDUR.test(tx)) { kena = true; PANGGIL = null; try { r.abort(); } catch (x) {} aturPanggil(false); return; }   // "La Rubi silahkan tidur": panggilan mati
           if (POLA_PANGGIL.test(tx)) { kena = true; break; }
         }
