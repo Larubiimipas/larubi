@@ -91,7 +91,7 @@
   <div class="bar"><i id="muat-bar"></i></div>
 </div>
 <iframe id="larubi" title="La Rubi"
-  allow="camera; microphone; fullscreen; autoplay; clipboard-write"
+  allow="camera; microphone; geolocation; fullscreen; autoplay; clipboard-write"
   allowfullscreen></iframe>
 
 <div id="hq" hidden role="dialog" aria-modal="true" aria-label="Pindai kode QR">
@@ -494,6 +494,22 @@
 <script>
   /* PWA: service worker (dibutuhkan agar La Rubi bisa diinstal sebagai aplikasi) */
   if ('serviceWorker' in navigator) window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+</script>
+<script>
+/* Lokasi GPS untuk La Rubi (Patroli): di dalam bingkai Google, lokasi bisa diblokir browser.
+ * La Rubi mengirim { rrLokasi: 'minta', id } -> halaman ini membaca GPS perangkat -> { rrLokasi: 'hasil', id, lat, lng, akurasi }. */
+(function () {
+  function sahAsal(o) { return /^https:\/\/([a-z0-9-]+\.)*(googleusercontent\.com|google\.com)$/i.test(o); }
+  window.addEventListener('message', function (e) {
+    var d = e.data;
+    if (!d || typeof d !== 'object' || d.rrLokasi !== 'minta' || !sahAsal(e.origin)) return;
+    var src = e.source, asal = e.origin;
+    function balas(x) { try { src.postMessage(Object.assign({ rrLokasi: 'hasil', id: d.id }, x), asal); } catch (er) {} }
+    if (!navigator.geolocation) { balas({ galat: 'tidak didukung' }); return; }
+    navigator.geolocation.getCurrentPosition(function (p) { balas({ lat: p.coords.latitude, lng: p.coords.longitude, akurasi: p.coords.accuracy }); },
+      function (er) { balas({ galat: String((er && er.message) || 'gagal') }); }, { enableHighAccuracy: true, timeout: 8500, maximumAge: 20000 });
+  });
+})();
 </script>
 </body>
 </html>
