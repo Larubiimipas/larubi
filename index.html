@@ -3,7 +3,31 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>La Rubi - Layanan Rutan Raba Bima</title>
+<title>La Rubi - Layanan Online Rutan Kelas IIB Raba Bima</title>
+<!-- PENCARIAN GOOGLE (SEO): deskripsi, alamat kanonik, pratinjau tautan (WhatsApp/Facebook/X), data terstruktur schema.org.
+     Isi La Rubi dimuat di dalam bingkai (iframe) dan TIDAK dibaca Google; karena itu keterangan layanan ditulis di halaman ini
+     (ringkasan di bawah) dan lengkap di informasi.html. -->
+<meta name="description" content="La Rubi adalah layanan online Rutan Kelas IIB Raba Bima, Kota Bima, NTB: daftar kunjungan WBP dengan barcode, izin luar biasa, pengaduan 24 jam dengan nomor tiket, self service WBP, data penghuni, dan survei kepuasan.">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://larubiimipas.github.io/larubi/">
+<!-- Google Search Console: ganti KODE_VERIFIKASI dengan kode dari Search Console (Metode: Tag HTML), lalu hapus tanda komentar -->
+<!-- <meta name="google-site-verification" content="KODE_VERIFIKASI"> -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="La Rubi">
+<meta property="og:locale" content="id_ID">
+<meta property="og:title" content="La Rubi - Layanan Online Rutan Kelas IIB Raba Bima">
+<meta property="og:description" content="Daftar kunjungan, izin luar biasa, pengaduan 24 jam dengan nomor tiket, dan layanan Rutan Raba Bima lainnya secara online.">
+<meta property="og:url" content="https://larubiimipas.github.io/larubi/">
+<meta property="og:image" content="https://larubiimipas.github.io/larubi/ikon/og-larubi.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="La Rubi - Layanan Online Rutan Kelas IIB Raba Bima">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@RutanRaba">
+<meta name="twitter:title" content="La Rubi - Layanan Online Rutan Kelas IIB Raba Bima">
+<meta name="twitter:description" content="Daftar kunjungan, izin luar biasa, pengaduan 24 jam, dan layanan Rutan Raba Bima lainnya secara online.">
+<meta name="twitter:image" content="https://larubiimipas.github.io/larubi/ikon/og-larubi.jpg">
+<script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "GovernmentOrganization", "@id": "https://larubiimipas.github.io/larubi/#rutan", "name": "Rumah Tahanan Negara Kelas IIB Raba Bima", "alternateName": ["Rutan Kelas IIB Raba Bima", "Rutan Raba Bima", "Rutan Bima"], "url": "https://rutanbima.kemenkumham.go.id", "logo": "https://larubiimipas.github.io/larubi/ikon/ikon-512.png", "image": "https://larubiimipas.github.io/larubi/ikon/og-larubi.jpg", "telephone": "+62-821-4540-0649", "address": {"@type": "PostalAddress", "streetAddress": "Jl. Pepaya No. 22, Kelurahan Rabangodu Selatan, Kecamatan Raba", "addressLocality": "Kota Bima", "addressRegion": "Nusa Tenggara Barat", "addressCountry": "ID"}, "contactPoint": [{"@type": "ContactPoint", "contactType": "Informasi dan pengaduan", "telephone": "+62-821-4540-0649", "availableLanguage": ["id"]}], "parentOrganization": {"@type": "GovernmentOrganization", "name": "Kementerian Imigrasi dan Pemasyarakatan Republik Indonesia"}, "sameAs": ["https://instagram.com/rutanraba", "https://x.com/RutanRaba", "https://www.tiktok.com/@rutanraba", "https://www.facebook.com/share/1MC2ksLtbF/", "https://rutanbima.kemenkumham.go.id"]}, {"@type": "WebApplication", "@id": "https://larubiimipas.github.io/larubi/#larubi", "name": "La Rubi - Layanan Rutan Raba Bima", "alternateName": "La Rubi", "url": "https://larubiimipas.github.io/larubi/", "description": "La Rubi adalah layanan online Rutan Kelas IIB Raba Bima, Kota Bima, NTB: daftar kunjungan WBP dengan barcode, izin luar biasa, pengaduan 24 jam dengan nomor tiket, self service WBP, data penghuni, dan survei kepuasan.", "inLanguage": ["id", "en"], "applicationCategory": "GovernmentApplication", "operatingSystem": "Semua (browser, Android)", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "IDR"}, "provider": {"@id": "https://larubiimipas.github.io/larubi/#rutan"}, "image": "https://larubiimipas.github.io/larubi/ikon/og-larubi.jpg"}, {"@type": "WebSite", "@id": "https://larubiimipas.github.io/larubi/#situs", "name": "La Rubi", "url": "https://larubiimipas.github.io/larubi/", "inLanguage": "id", "publisher": {"@id": "https://larubiimipas.github.io/larubi/#rutan"}}]}</script>
 <!-- aplikasi terpasang (PWA): "Instal aplikasi" di Chrome & APK dari PWABuilder -->
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#16304F">
@@ -22,6 +46,8 @@
   Halaman ini harus dibuka lewat https:// (mis. GitHub Pages) agar kamera boleh dipakai.
 -->
 <style>
+  /* ringkasan layanan untuk mesin pencari & pembaca layar: ada di halaman, tertutup aplikasi */
+  .ringkas { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
   html, body { margin: 0; padding: 0; height: 100%; background: #16304F; overflow: hidden; font-family: system-ui, "Segoe UI", Arial, sans-serif; }
   #larubi { position: fixed; top: 0; left: 0; width: 100%; height: 100%; border: 0; display: block; }
   /* layar pembuka: logo + "Memuat" + persen (perkiraan tahap pemuatan; tidak menambah data yang diunduh) */
@@ -84,6 +110,21 @@
 </style>
 </head>
 <body>
+<main class="ringkas">
+  <h1>La Rubi - Layanan Online Rutan Kelas IIB Raba Bima</h1>
+  <p>La Rubi (Layanan Rutan Raba Bima) adalah aplikasi layanan online resmi Rumah Tahanan Negara Kelas IIB Raba Bima, Kota Bima, Nusa Tenggara Barat, di bawah Kementerian Imigrasi dan Pemasyarakatan Republik Indonesia.</p>
+  <h2>Layanan</h2>
+  <ul>
+    <li>Pendaftaran kunjungan WBP (warga binaan) secara online dengan barcode. Kunjungan narapidana hari Senin dan Rabu, tahanan hari Selasa dan Kamis.</li>
+    <li>Permohonan izin luar biasa: menjadi wali nikah, menghadiri pemakaman, menjenguk keluarga sakit, pembagian warisan.</li>
+    <li>Pelayanan pengaduan 24 jam dengan nomor tiket dan cek status pengaduan.</li>
+    <li>Self service WBP: cek data warga binaan dengan kartu.</li>
+    <li>Data penghuni rutan, survei kepuasan masyarakat, dan live chat dengan petugas.</li>
+  </ul>
+  <h2>Alamat dan kontak</h2>
+  <p>Jl. Pepaya No. 22, Kelurahan Rabangodu Selatan, Kecamatan Raba, Kota Bima, Nusa Tenggara Barat. Informasi dan pengaduan: 0821-4540-0649. Instagram @rutanraba, X @RutanRaba.</p>
+  <p><a href="informasi.html">Informasi lengkap layanan Rutan Raba Bima</a></p>
+</main>
 <div id="muat" role="status" aria-live="polite">
   <img class="maskot" src="ikon/maskot.webp" width="132" height="196" alt="">
   <div class="nama">La Rubi</div>
