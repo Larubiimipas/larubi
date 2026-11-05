@@ -447,17 +447,19 @@
     if (!SR) { balas({ rrSuara: 'hasil', id: d.id, galat: 'tidak-didukung' }); return; }
     hentiPanggil();
     if (aktif) { try { aktif.r.abort(); } catch (x) {} }
-    var r = new SR(), alt = [], selesai = false, id = d.id;
-    r.lang = d.lang || 'id-ID'; r.interimResults = true; r.maxAlternatives = 3; r.continuous = false;
+    var r = new SR(), alt = [], selesai = false, id = d.id, terus = !!d.terus;
+    /* terus: mode kata kunci "stop" selama La Rubi berbicara -> satu sesi tanpa jeda, setiap potongan (sementara maupun final) dikirim */
+    r.lang = d.lang || 'id-ID'; r.interimResults = true; r.maxAlternatives = 3; r.continuous = terus;
     aktif = { id: id, r: r };
     function akhir(isi) { if (selesai) return; selesai = true; if (aktif && aktif.r === r) aktif = null; balas(Object.assign({ rrSuara: 'hasil', id: id }, isi)); }
     r.onresult = function (ev) {
       var sela = '';
       for (var i = ev.resultIndex; i < ev.results.length; i++) {
+        if (terus) { sela += ' ' + ev.results[i][0].transcript; continue; }
         if (ev.results[i].isFinal) { alt = []; for (var j = 0; j < ev.results[i].length; j++) alt.push(ev.results[i][j].transcript); }
         else sela += ev.results[i][0].transcript;
       }
-      if (!alt.length && sela) balas({ rrSuara: 'sela', id: id, teks: sela });
+      if ((terus || !alt.length) && sela.trim()) balas({ rrSuara: 'sela', id: id, teks: sela.trim() });
     };
     r.onerror = function (ev) { akhir({ galat: ev.error || 'gagal' }); };
     r.onend = function () { akhir(alt.length ? { teks: alt[0], alt: alt } : { galat: 'no-speech' }); };
